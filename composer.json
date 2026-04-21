@@ -1,0 +1,54 @@
+{
+    "name": "arabiacode/laravel-flow-builder",
+    "version": "1.0.0",
+    "description": "Professional workflow automation builder for Laravel with triggers, visual nodes, and execution logs.",
+    "keywords": ["laravel", "workflow automation", "flow builder", "business process", "no-code", "low-code", "webhook", "scheduler"],
+    "homepage": "https://github.com/arabiacode/laravel-flow-builder",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "ArabiaCode",
+            "email": "info@arabiacode.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/arabiacode/laravel-flow-builder/issues",
+        "source": "https://github.com/arabiacode/laravel-flow-builder"
+    },
+    "require": {
+        "php": "^8.1",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "illuminate/database": "^10.0|^11.0|^12.0",
+        "illuminate/queue": "^10.0|^11.0|^12.0",
+        "illuminate/events": "^10.0|^11.0|^12.0",
+        "illuminate/notifications": "^10.0|^11.0|^12.0",
+        "illuminate/mail": "^10.0|^11.0|^12.0",
+        "illuminate/http": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^10.0|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Arabiacode\\LaravelFlowBuilder\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Arabiacode\\LaravelFlowBuilder\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Arabiacode\\LaravelFlowBuilder\\FlowBuilderServiceProvider"
+            ],
+            "aliases": {
+                "FlowBuilder": "Arabiacode\\LaravelFlowBuilder\\Facades\\FlowBuilder"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
