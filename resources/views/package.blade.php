@@ -8,7 +8,7 @@
 
 @section('content')
 <div class="row g-3 mb-4">
-    <div class="col-lg-8">
+    <div class="col-lg-7">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <span><i class="bi bi-box-seam me-2"></i>Laravel Flow Builder</span>
@@ -29,14 +29,16 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
+    <div class="col-lg-5">
         <div class="card h-100">
             <div class="card-header"><i class="bi bi-download me-2"></i>Download</div>
             <div class="card-body">
                 <p class="small text-muted mb-2">Install from Packagist:</p>
                 <pre class="bg-light p-3 rounded border small mb-3">composer require arabiacode/laravel-flow-builder</pre>
                 <p class="small text-muted mb-2">Run migrations:</p>
-                <pre class="bg-light p-3 rounded border small mb-0">php artisan migrate</pre>
+                <pre class="bg-light p-3 rounded border small mb-3">php artisan migrate</pre>
+                <p class="small text-muted mb-2">Access the flow builder UI:</p>
+                <pre class="bg-light p-3 rounded border small mb-0">http://127.0.0.1:8000/flow-builder</pre>
             </div>
         </div>
     </div>
@@ -51,7 +53,7 @@
                     <li>Visual flow builder with nodes and connections</li>
                     <li>Trigger types: model events, webhooks, scheduled flows</li>
                     <li>Node types: trigger, condition, action, operation, integration</li>
-                    <li>Template variables with dot notation, for example {{ '{{order.total}}' }}</li>
+                    <li>Template variables with dot notation, for example "'{{'order.total'}}'"</li>
                     <li>Execution logs and history for each flow run</li>
                     <li>Custom node executors through package configuration</li>
                 </ul>
