@@ -4,7 +4,7 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/arabiacode/laravel-flow-builder.svg?style=flat-square)](https://packagist.org/packages/arabiacode/laravel-flow-builder)
 [![Total Downloads](https://img.shields.io/packagist/dt/arabiacode/laravel-flow-builder.svg?style=flat-square)](https://packagist.org/packages/arabiacode/laravel-flow-builder)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-777BB4.svg?style=flat-square)](https://php.net)
-[![Laravel Version](https://img.shields.io/badge/Laravel-10.x%20%7C%2011.x%20%7C%2012.x-red.svg?style=flat-square)](https://laravel.com)
+[![Laravel Version](https://img.shields.io/badge/Laravel-11.x%20%7C%2012.x%20%7C%2013.x-red.svg?style=flat-square)](https://laravel.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 
 A production-ready Laravel package for no-code and low-code workflow automation.
@@ -66,7 +66,7 @@ Build business flows using triggers and visual nodes, then execute them through 
 ## Requirements
 
 - PHP 8.1 or higher
-- Laravel 10, 11, or 12
+- Laravel 11, 12 or 13
 
 ## Download and Installation
 
