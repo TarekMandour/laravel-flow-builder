@@ -1,6 +1,6 @@
 {
     "name": "arabiacode/laravel-flow-builder",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Professional workflow automation builder for Laravel with triggers, visual nodes, and execution logs.",
     "keywords": ["laravel", "workflow automation", "flow builder", "business process", "no-code", "low-code", "webhook", "scheduler"],
     "homepage": "https://github.com/arabiacode/laravel-flow-builder",
