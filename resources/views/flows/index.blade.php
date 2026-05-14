@@ -61,6 +61,10 @@
                         <div class="btn-group btn-group-sm">
                             <a href="{{ route('flow-builder.flows.edit', $flow) }}" class="btn btn-primary me-2" title="Edit"><i class="bi bi-pencil"></i></a>
                             <a href="{{ route('flow-builder.flows.builder', $flow) }}" class="btn btn-dark me-2" title="Builder"><i class="bi bi-diagram-3"></i></a>
+                            <form action="{{ route('flow-builder.flows.duplicate', $flow) }}" method="POST" class="d-inline me-2">
+                                @csrf
+                                <button type="submit" class="btn btn-secondary btn-sm" title="Duplicate"><i class="bi bi-copy"></i></button>
+                            </form>
                             <form action="{{ route('flow-builder.flows.destroy', $flow) }}" method="POST" onsubmit="return confirm('Delete this flow?')">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-danger btn-sm" title="Delete"><i class="bi bi-trash"></i></button>

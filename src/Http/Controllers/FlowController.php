@@ -100,6 +100,63 @@ class FlowController extends Controller
             ->with('success', 'Flow deleted.');
     }
 
+    public function duplicate(Flow $flow)
+    {
+        DB::transaction(function () use ($flow) {
+            // Clone the flow
+            $newFlow = Flow::create([
+                'name'        => 'Copy of ' . $flow->name,
+                'description' => $flow->description,
+                'is_active'   => false,
+                'created_by'  => $flow->created_by,
+            ]);
+
+            // Duplicate triggers
+            foreach ($flow->triggers as $trigger) {
+                $newFlow->triggers()->create([
+                    'type'        => $trigger->type,
+                    'model_class' => $trigger->model_class,
+                    'event'       => $trigger->event,
+                    'conditions'  => $trigger->conditions,
+                ]);
+            }
+
+            // Duplicate nodes and build old→new ID map
+            $nodeIdMap = [];
+            foreach ($flow->nodes as $node) {
+                $newNode = $newFlow->nodes()->create([
+                    'type'       => $node->type,
+                    'name'       => $node->name,
+                    'data'       => $node->data,
+                    'sort_order' => $node->sort_order,
+                    'position_x' => $node->position_x,
+                    'position_y' => $node->position_y,
+                ]);
+                $nodeIdMap[$node->id] = $newNode->id;
+            }
+
+            // Duplicate connections using the node ID map
+            foreach ($flow->connections as $connection) {
+                $newFlow->connections()->create([
+                    'from_node_id'    => $nodeIdMap[$connection->from_node_id] ?? null,
+                    'to_node_id'      => $nodeIdMap[$connection->to_node_id] ?? null,
+                    'condition_value' => $connection->condition_value,
+                ]);
+            }
+
+            // Duplicate flow variables
+            foreach ($flow->variables as $variable) {
+                $newFlow->variables()->create([
+                    'key'   => $variable->key,
+                    'value' => $variable->value,
+                ]);
+            }
+        });
+
+        return redirect()->route('flow-builder.flows.index')
+            ->with('success', 'Flow duplicated successfully.');
+    }
+
     public function builder(Flow $flow)
     {
         $flow->load(['nodes', 'nodes.outgoingConnections', 'triggers']);

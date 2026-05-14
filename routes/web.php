@@ -18,6 +18,7 @@ Route::middleware(config('flow-builder.web_middleware', ['web']))
         Route::get('/flows/{flow}/edit', [FlowController::class, 'edit'])->name('flows.edit');
         Route::put('/flows/{flow}', [FlowController::class, 'update'])->name('flows.update');
         Route::patch('/flows/{flow}/toggle', [FlowController::class, 'toggle'])->name('flows.toggle');
+        Route::post('/flows/{flow}/duplicate', [FlowController::class, 'duplicate'])->name('flows.duplicate');
         Route::delete('/flows/{flow}', [FlowController::class, 'destroy'])->name('flows.destroy');
 
         Route::get('/flows/{flow}/builder', [FlowController::class, 'builder'])->name('flows.builder');

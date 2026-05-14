@@ -374,6 +374,16 @@
                             <label class="form-label">Body <span class="text-danger">*</span></label>
                             <div id="intFirebaseBodyContainer"></div>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Type <span class="text-muted small">(optional)</span></label>
+                            <div id="intFirebaseTypeContainer"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Type ID <span class="text-muted small">(optional)</span></label>
+                            <div id="intFirebaseTypeIdContainer"></div>
+                        </div>
                     </div>
 
                     {{-- Google Drive fields --}}
@@ -661,6 +671,7 @@ function addFieldMappingRow(container, field, value, modelClass, nodeId) {
     const fieldSelect = document.createElement('select');
     fieldSelect.className = 'form-select field-select';
     fieldSelect.innerHTML = '<option value="">Select field…</option>';
+    fieldSelect.dataset.selectedValue = field;  // store for async restore
     colField.appendChild(fieldSelect);
 
     if (modelClass && cachedFields[modelClass]) {
@@ -702,6 +713,7 @@ function addFindByRow(container, field, value, modelClass, nodeId) {
     const fieldSelect = document.createElement('select');
     fieldSelect.className = 'form-select findby-field';
     fieldSelect.innerHTML = '<option value="">Select field…</option>';
+    fieldSelect.dataset.selectedValue = field;  // store for async restore
     colField.appendChild(fieldSelect);
 
     if (modelClass && cachedFields[modelClass]) {
@@ -744,6 +756,7 @@ function addWhereRow(container, field, operator, value, modelClass, nodeId) {
     const fieldSelect = document.createElement('select');
     fieldSelect.className = 'form-select where-field';
     fieldSelect.innerHTML = '<option value="">Select field…</option>';
+    fieldSelect.dataset.selectedValue = field;  // store for async restore
     colField.appendChild(fieldSelect);
 
     if (modelClass && cachedFields[modelClass]) {
@@ -801,7 +814,7 @@ async function refreshFieldSelects(modelClass) {
     const cols = info.columns || [];
 
     document.querySelectorAll('#fieldMappingRows .field-select').forEach(sel => {
-        const cur = sel.value;
+        const cur = sel.dataset.selectedValue !== undefined ? sel.dataset.selectedValue : sel.value;
         sel.innerHTML = '<option value="">Select field…</option>';
         cols.forEach(c => {
             const opt = document.createElement('option');
@@ -810,10 +823,11 @@ async function refreshFieldSelects(modelClass) {
             if (c === cur) opt.selected = true;
             sel.appendChild(opt);
         });
+        delete sel.dataset.selectedValue;
     });
 
     document.querySelectorAll('#findByRows .findby-field').forEach(sel => {
-        const cur = sel.value;
+        const cur = sel.dataset.selectedValue !== undefined ? sel.dataset.selectedValue : sel.value;
         sel.innerHTML = '<option value="">Select field…</option>';
         ['id', ...cols].forEach(c => {
             const opt = document.createElement('option');
@@ -822,11 +836,25 @@ async function refreshFieldSelects(modelClass) {
             if (c === cur) opt.selected = true;
             sel.appendChild(opt);
         });
+        delete sel.dataset.selectedValue;
+    });
+
+    document.querySelectorAll('#whereRows .where-field').forEach(sel => {
+        const cur = sel.dataset.selectedValue !== undefined ? sel.dataset.selectedValue : sel.value;
+        sel.innerHTML = '<option value="">Select field…</option>';
+        ['id', ...cols].forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            if (c === cur) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        delete sel.dataset.selectedValue;
     });
 
     const incDecField = document.getElementById('incDecField');
     if (incDecField) {
-        const cur = incDecField.value;
+        const cur = incDecField.dataset.selectedValue !== undefined ? incDecField.dataset.selectedValue : incDecField.value;
         incDecField.innerHTML = '<option value="">Select field…</option>';
         cols.forEach(c => {
             const opt = document.createElement('option');
@@ -835,6 +863,7 @@ async function refreshFieldSelects(modelClass) {
             if (c === cur) opt.selected = true;
             incDecField.appendChild(opt);
         });
+        delete incDecField.dataset.selectedValue;
     }
 }
 
@@ -1242,10 +1271,67 @@ function showActionPanel(node) {
 
     actionType.onchange = () => toggleActionSubSections(actionType.value, {}, node.id);
     modelSelect.onchange = async () => {
-        if (modelSelect.value) {
-            await refreshFieldSelects(modelSelect.value);
+        const mc = modelSelect.value;
+        if (!mc) return;
+        await refreshFieldSelects(mc);
+        const action = document.getElementById('actionType').value;
+        if (['get', 'first', 'find'].includes(action)) {
+            populateSelectColumns(mc, [], node.id);
+        }
+        if (['get', 'first'].includes(action)) {
+            populateOrderBy(mc, '', 'asc');
         }
     };
+}
+
+function populateSelectColumns(modelClass, selected, nodeId) {
+    const selectContainer = document.getElementById('selectColumnsContainer');
+    if (!selectContainer) return;
+    if (!modelClass) { selectContainer.innerHTML = ''; return; }
+    loadModelFields(modelClass).then(info => {
+        const cols = info.columns || [];
+        selectContainer.innerHTML = '';
+        cols.forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'form-check form-check-inline';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'form-check-input';
+            cb.value = c;
+            cb.id = 'selcol_' + c;
+            if (selected.includes(c)) cb.checked = true;
+            const lbl = document.createElement('label');
+            lbl.className = 'form-check-label small';
+            lbl.htmlFor = 'selcol_' + c;
+            lbl.textContent = c;
+            div.appendChild(cb);
+            div.appendChild(lbl);
+            selectContainer.appendChild(div);
+        });
+    });
+}
+
+function populateOrderBy(modelClass, selectedField, selectedDir) {
+    const orderByField = document.getElementById('orderByField');
+    const orderByDir = document.getElementById('orderByDirection');
+    if (!orderByField) return;
+    if (!modelClass) {
+        orderByField.innerHTML = '<option value="">No ordering</option>';
+        return;
+    }
+    loadModelFields(modelClass).then(info => {
+        const cols = info.columns || [];
+        orderByField.innerHTML = '<option value="">No ordering</option>';
+        ['id', ...cols].forEach(c => {
+            if (orderByField.querySelector('option[value="' + c + '"]')) return;
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            if (c === selectedField) opt.selected = true;
+            orderByField.appendChild(opt);
+        });
+        orderByDir.value = selectedDir || 'asc';
+    });
 }
 
 function toggleActionSubSections(action, data, nodeId) {
@@ -1288,7 +1374,9 @@ function toggleActionSubSections(action, data, nodeId) {
         }
 
         if (['increment', 'decrement'].includes(action)) {
-            document.getElementById('incDecField').value = data.field || '';
+            const incDecEl = document.getElementById('incDecField');
+            incDecEl.dataset.selectedValue = data.field || '';  // store for async restore
+            incDecEl.value = data.field || '';
             document.getElementById('incDecValue').value = data.value ?? 1;
         }
 
@@ -1311,49 +1399,11 @@ function toggleActionSubSections(action, data, nodeId) {
             }
 
             // Select columns
-            const selectContainer = document.getElementById('selectColumnsContainer');
-            selectContainer.innerHTML = '';
-            if (modelClass) {
-                loadModelFields(modelClass).then(info => {
-                    const cols = info.columns || [];
-                    const selected = data.select_columns || [];
-                    selectContainer.innerHTML = '';
-                    cols.forEach(c => {
-                        const div = document.createElement('div');
-                        div.className = 'form-check form-check-inline';
-                        const cb = document.createElement('input');
-                        cb.type = 'checkbox';
-                        cb.className = 'form-check-input';
-                        cb.value = c;
-                        cb.id = 'selcol_' + c;
-                        if (selected.includes(c)) cb.checked = true;
-                        const lbl = document.createElement('label');
-                        lbl.className = 'form-check-label small';
-                        lbl.htmlFor = 'selcol_' + c;
-                        lbl.textContent = c;
-                        div.appendChild(cb);
-                        div.appendChild(lbl);
-                        selectContainer.appendChild(div);
-                    });
-                });
-            }
+            populateSelectColumns(modelClass, data.select_columns || [], nodeId);
 
             // Order By
-            if (['get', 'first'].includes(action) && modelClass) {
-                loadModelFields(modelClass).then(info => {
-                    const cols = info.columns || [];
-                    const orderByField = document.getElementById('orderByField');
-                    orderByField.innerHTML = '<option value="">No ordering</option>';
-                    ['id', ...cols].forEach(c => {
-                        if (orderByField.querySelector('option[value="' + c + '"]')) return;
-                        const opt = document.createElement('option');
-                        opt.value = c;
-                        opt.textContent = c;
-                        if (c === (data.order_by || '')) opt.selected = true;
-                        orderByField.appendChild(opt);
-                    });
-                    document.getElementById('orderByDirection').value = data.order_direction || 'asc';
-                });
+            if (['get', 'first'].includes(action)) {
+                populateOrderBy(modelClass, data.order_by || '', data.order_direction || 'asc');
             }
 
             // Limit
@@ -1420,7 +1470,10 @@ async function showIntegrationPanel(node) {
 
     document.getElementById('intResultKey').value = d.result_key || '';
 
-    // Load saved integrations dropdown
+    // Populate sub-sections FIRST (synchronously) so modal opens with correct data
+    toggleIntegrationSubSections(d.type || '', d, node.id);
+
+    // Load saved integrations dropdown (async — populates after modal opens)
     const intSelect = document.getElementById('integrationSelect');
     intSelect.innerHTML = '<option value="">None — use config values</option>';
     const integrations = await loadIntegrations();
@@ -1431,8 +1484,6 @@ async function showIntegrationPanel(node) {
         if (String(i.id) === String(d.integration_id || '')) opt.selected = true;
         intSelect.appendChild(opt);
     });
-
-    toggleIntegrationSubSections(d.type || '', d, node.id);
 
     typeSelect.onchange = () => {
         toggleIntegrationSubSections(typeSelect.value, {}, node.id);
@@ -1500,6 +1551,14 @@ function toggleIntegrationSubSections(type, data, nodeId) {
         const bodyContainer = document.getElementById('intFirebaseBodyContainer');
         bodyContainer.innerHTML = '';
         bodyContainer.appendChild(buildValueInput('int_fb_body', data.body || '', nodeId));
+
+        const typeContainer = document.getElementById('intFirebaseTypeContainer');
+        typeContainer.innerHTML = '';
+        typeContainer.appendChild(buildValueInput('int_fb_type', data.firebase_type || '', nodeId));
+
+        const typeIdContainer = document.getElementById('intFirebaseTypeIdContainer');
+        typeIdContainer.innerHTML = '';
+        typeIdContainer.appendChild(buildValueInput('int_fb_type_id', data.type_id || '', nodeId));
     }
 
     if (type === 'google_drive') {
@@ -1589,6 +1648,10 @@ function collectIntegrationData() {
         data.title = titleInput ? titleInput.value : '';
         const bodyInput = document.querySelector('#intFirebaseBodyContainer input[name="int_fb_body"]');
         data.body = bodyInput ? bodyInput.value : '';
+        const typeInput = document.querySelector('#intFirebaseTypeContainer input[name="int_fb_type"]');
+        data.firebase_type = typeInput ? typeInput.value : '';  // use firebase_type key to avoid overwriting data.type
+        const typeIdInput = document.querySelector('#intFirebaseTypeIdContainer input[name="int_fb_type_id"]');
+        data.type_id = typeIdInput ? typeIdInput.value : '';
     }
 
     if (data.type === 'google_drive') {

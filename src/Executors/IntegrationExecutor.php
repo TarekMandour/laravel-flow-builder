@@ -6,6 +6,8 @@ use Arabiacode\LaravelFlowBuilder\Contracts\NodeExecutor;
 use Arabiacode\LaravelFlowBuilder\Engine\FlowState;
 use Arabiacode\LaravelFlowBuilder\Models\FlowNode;
 use Arabiacode\LaravelFlowBuilder\Models\Integration;
+use Kreait\Firebase\Factory;
+use Kreait\Firebase\Messaging\CloudMessage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -138,23 +140,47 @@ class IntegrationExecutor implements NodeExecutor
             throw new \RuntimeException('Firebase server key is not configured.');
         }
 
-        $to = $state->resolveValue($data['device_token'] ?? $params['device_token'] ?? '');
+        $to[] = $state->resolveValue($data['device_token'] ?? $params['device_token'] ?? '');
         $title = $state->resolveValue($data['title'] ?? $params['title'] ?? '');
         $body = $state->resolveValue($data['body'] ?? $params['body'] ?? '');
-        $extraData = $state->resolveArray($data['data'] ?? $params['data'] ?? []);
+        $type = $state->resolveValue($data['type'] ?? $params['type'] ?? '');
+        $type_id = $state->resolveValue($data['type_id'] ?? $params['type_id'] ?? '');
 
         try {
-            $response = Http::withoutVerifying()->withHeaders([
-                'Authorization' => "key={$serverKey}",
-                'Content-Type' => 'application/json',
-            ])->post('https://fcm.googleapis.com/fcm/send', [
-                'to' => $to,
-                'notification' => [
-                    'title' => $title,
-                    'body' => $body,
-                ],
-                'data' => $extraData,
-            ]);
+
+            $firebase = (new Factory)->withServiceAccount(storage_path('app/firebase/firebase_credentials.json'));
+ 
+            $messaging = $firebase->createMessaging();
+    
+            if (isset($to) && $to != null && $to != 0) { 
+                $message = CloudMessage::fromArray([
+                    'notification' => [
+                        'title' => (string) $title,
+                        'body' => (string)$body
+                    ], // optional
+                    'data' => [
+                        'title' => (string) $title,
+                        'body' => (string) $body,
+                        'type' => (string) $type,
+                        'type_id' => (string) $type_id
+                    ], // optional
+                ]);
+                
+                $messaging->sendMulticast($message, $to);
+
+                return [
+                    'firebase_sent' => true,
+                    'status' => 1,
+                    'error' => '',
+                ];
+            } else {
+                return [
+                    'firebase_sent' => false,
+                    'status' => 0,
+                    'error' => 'No device token provided',
+                ];
+            }       
+
         } catch (\Exception $e) {
             return [
                 'firebase_sent' => false,
@@ -163,11 +189,6 @@ class IntegrationExecutor implements NodeExecutor
             ];
         }
 
-        return [
-            'firebase_sent' => $response->successful(),
-            'status' => $response->status(),
-            'response' => $response->json(),
-        ];
     }
 
     protected function googleDriveUpload(?Integration $integration, array $data, array $params, FlowState $state): array

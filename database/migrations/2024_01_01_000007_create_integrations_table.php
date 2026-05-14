@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('type'); // firebase, google_drive, whatsapp, webhook
-            $table->json('credentials')->nullable();
+            $table->longText('credentials')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
