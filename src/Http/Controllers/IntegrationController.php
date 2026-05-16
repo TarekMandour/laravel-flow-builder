@@ -24,7 +24,7 @@ class IntegrationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|string|in:webhook,whatsapp,firebase,google_drive',
+            'type' => 'required|string|in:webhook,whatsapp,firebase,google_drive,ai_agent',
             'is_active' => 'nullable|boolean',
             'credential_keys' => 'nullable|array',
             'credential_keys.*' => 'nullable|string|max:255',
@@ -54,7 +54,7 @@ class IntegrationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|string|in:webhook,whatsapp,firebase,google_drive',
+            'type' => 'required|string|in:webhook,whatsapp,firebase,google_drive,ai_agent',
             'is_active' => 'nullable|boolean',
             'credential_keys' => 'nullable|array',
             'credential_keys.*' => 'nullable|string|max:255',

@@ -45,6 +45,7 @@
     .node-type-action .node-header { background: #d1fae5; color: #065f46; }
     .node-type-operation .node-header { background: #ede9fe; color: #5b21b6; }
     .node-type-integration .node-header { background: #fce7f3; color: #9d174d; }
+    .node-type-ai_agent .node-header { background: #e0f2fe; color: #0369a1; }
     .port {
         width: 12px; height: 12px; border-radius: 50%; background: #9ca3af;
         border: 2px solid #fff; position: absolute; cursor: crosshair; z-index: 15;
@@ -65,6 +66,7 @@
     <button class="btn btn-outline-success btn-sm" onclick="addNode('action')"><i class="bi bi-gear"></i> Action</button>
     <button class="btn btn-outline-info btn-sm" onclick="addNode('operation')"><i class="bi bi-calculator"></i> Operation</button>
     <button class="btn btn-outline-danger btn-sm" onclick="addNode('integration')"><i class="bi bi-plug"></i> Integration</button>
+    <button class="btn btn-outline-primary btn-sm" onclick="addNode('ai_agent')"><i class="bi bi-robot"></i> AI Agent</button>
     <span class="ms-auto small text-muted" id="statusText">Drag nodes to reposition. Click port to connect.</span>
 </div>
 
@@ -203,6 +205,52 @@
                                 <input type="number" class="form-control form-control-solid" id="queryLimit" min="1" placeholder="No limit">
                             </div>
                         </div>
+
+                        {{-- Media (Spatie Media Library) --}}
+                        <div id="mediaSection" class="d-none mt-3">
+                            <hr class="my-2">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="mediaEnabled">
+                                <label class="form-check-label fw-semibold" for="mediaEnabled">
+                                    <i class="bi bi-image"></i> Media <span class="text-muted small fw-normal">(Spatie Media Library)</span>
+                                </label>
+                            </div>
+                            <div id="mediaFields" class="d-none ps-3 border-start border-2">
+                                {{-- Write: create / update --}}
+                                <div id="mediaWriteFields">
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label">Collection</label>
+                                            <input type="text" class="form-control form-control-solid" id="mediaCollection" placeholder="default">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Action</label>
+                                            <select class="form-select" id="mediaAction">
+                                                <option value="add">Add to collection</option>
+                                                <option value="replace">Replace collection</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Media Source <span class="text-muted small">(URL or file path)</span></label>
+                                        <div id="mediaSourceContainer"></div>
+                                        <div class="form-text">e.g. <code>https://…</code> or absolute server path. Supports <code>@{{variable}}</code>.</div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Custom File Name <span class="text-muted small">(optional)</span></label>
+                                        <div id="mediaFileNameContainer"></div>
+                                    </div>
+                                </div>
+                                {{-- Read: get / first / find --}}
+                                <div id="mediaReadFields" class="d-none">
+                                    <div class="mb-2">
+                                        <label class="form-label">Collections to Load <span class="text-muted small">(comma-separated, blank = all)</span></label>
+                                        <input type="text" class="form-control form-control-solid" id="mediaCollections" placeholder="default, images…">
+                                        <div class="form-text">A <code>media</code> key with URLs is appended to each record in the result.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -250,6 +298,7 @@
                             <option value="divide">Divide</option>
                             <option value="format_text">Format Text</option>
                             <option value="loop">Loop (iterate items)</option>
+                            <option value="delay">Delay (wait)</option>
                         </select>
                     </div>
 
@@ -288,6 +337,37 @@
                         </div>
                     </div>
 
+                    {{-- Delay --}}
+                    <div id="opDelayFields" class="d-none">
+                        <div class="mb-3">
+                            <label class="form-label">Delay Mode</label>
+                            <select class="form-select" id="opDelayMode">
+                                <option value="static">Static (fixed seconds)</option>
+                                <option value="random">Random (between two values)</option>
+                            </select>
+                        </div>
+                        <div id="opDelayStaticFields">
+                            <div class="mb-3">
+                                <label class="form-label">Seconds</label>
+                                <input type="number" class="form-control form-control-solid" id="opDelaySeconds" min="0" placeholder="e.g. 30">
+                                <div class="form-text">Flow execution will pause for this many seconds.</div>
+                            </div>
+                        </div>
+                        <div id="opDelayRandomFields" class="d-none">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label class="form-label">Min Seconds</label>
+                                    <input type="number" class="form-control form-control-solid" id="opDelayMin" min="0" placeholder="e.g. 10">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Max Seconds</label>
+                                    <input type="number" class="form-control form-control-solid" id="opDelayMax" min="0" placeholder="e.g. 180">
+                                </div>
+                            </div>
+                            <div class="form-text mt-1">A random delay between min and max seconds will be chosen at runtime.</div>
+                        </div>
+                    </div>
+
                     {{-- Result key --}}
                     <div id="opResultKeyGroup" class="mb-3">
                         <label class="form-label">Result Variable Name <span class="text-muted small">(optional)</span></label>
@@ -305,6 +385,7 @@
                             <option value="whatsapp">WhatsApp</option>
                             <option value="firebase">Firebase Push Notification</option>
                             <option value="google_drive">Google Drive</option>
+                            <option value="ai_agent">AI Agent (LLM / Groq / OpenAI)</option>
                         </select>
                     </div>
 
@@ -395,6 +476,29 @@
                             </select>
                         </div>
                         <div class="alert alert-info small mb-0">Google Drive integration requires additional OAuth2 setup.</div>
+                    </div>
+
+                    {{-- AI Agent fields --}}
+                    <div id="intAiAgentFields" class="d-none">
+                        <div class="mb-3">
+                            <label class="form-label">System Prompt <span class="text-muted small">(optional)</span></label>
+                            <div id="intAiSystemPromptContainer"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">User Message <span class="text-danger">*</span></label>
+                            <div id="intAiUserMessageContainer"></div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label">Max Tokens <span class="text-muted small">(optional)</span></label>
+                                <input type="number" class="form-control form-control-solid" id="intAiMaxTokens" min="1" max="32768" placeholder="e.g. 1024">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Temperature <span class="text-muted small">(0–2)</span></label>
+                                <input type="number" class="form-control form-control-solid" id="intAiTemperature" min="0" max="2" step="0.1" placeholder="e.g. 0.7">
+                            </div>
+                        </div>
+                        <div class="alert alert-info small mb-0"><i class="bi bi-info-circle me-1"></i>Select a saved AI Agent integration above for credentials, or configure <code>FLOW_BUILDER_AI_API_KEY</code> in your <code>.env</code>.</div>
                     </div>
 
                     {{-- Result key --}}
@@ -659,6 +763,58 @@ function buildValueInput(name, currentValue, currentNodeId) {
     return wrapper;
 }
 
+function buildTextareaValueInput(name, currentValue, currentNodeId) {
+    const vars = getAvailableVariables(currentNodeId);
+    const wrapper = document.createElement('div');
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'form-control form-control-solid form-control-sm mb-1';
+    textarea.name = name;
+    textarea.rows = 3;
+    textarea.value = currentValue || '';
+    textarea.placeholder = 'Static text or @{{variable}}';
+
+    const btnRow = document.createElement('div');
+    btnRow.className = 'd-flex';
+
+    const dropdown = document.createElement('button');
+    dropdown.type = 'button';
+    dropdown.className = 'btn btn-secondary btn-sm dropdown-toggle';
+    dropdown.dataset.bsToggle = 'dropdown';
+    dropdown.innerHTML = '<i class="bi bi-link-45deg"></i> Insert Variable';
+
+    const menu = document.createElement('ul');
+    menu.className = 'dropdown-menu';
+    menu.style.maxHeight = '250px';
+    menu.style.overflow = 'auto';
+
+    vars.forEach(v => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'dropdown-item small';
+        a.href = '#';
+        a.textContent = v.label;
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end);
+            textarea.value = before + v.value + after;
+            textarea.selectionStart = textarea.selectionEnd = start + v.value.length;
+            textarea.focus();
+        });
+        li.appendChild(a);
+        menu.appendChild(li);
+    });
+
+    btnRow.appendChild(dropdown);
+    btnRow.appendChild(menu);
+    wrapper.appendChild(textarea);
+    wrapper.appendChild(btnRow);
+    return wrapper;
+}
+
 // ==========================================
 // FIELD MAPPING ROWS
 // ==========================================
@@ -917,15 +1073,22 @@ function getNodeSummary(n) {
             s += ' · template';
         } else if (d.type === 'loop' && d.field) {
             s += ' · ' + escHtml(d.field);
+        } else if (d.type === 'delay') {
+            if (d.delay_mode === 'random') {
+                s += ' · ' + (d.min_seconds || 0) + 's–' + (d.max_seconds || 0) + 's';
+            } else {
+                s += ' · ' + (d.seconds || 0) + 's';
+            }
         }
         if (d.result_key) s += ' → ' + escHtml(d.result_key);
         return s;
     }
-    if (n.type === 'integration' && d.type) {
+    if ((n.type === 'integration' || n.type === 'ai_agent') && d.type) {
         let s = escHtml(d.type);
         if (d.type === 'webhook' && d.method) s += ' ' + d.method.toUpperCase();
         if (d.url) s += ' · ' + escHtml(d.url).substring(0, 30);
         if (d.to) s += ' · to:' + escHtml(d.to);
+        if (d.type === 'ai_agent' && d.user_message) s += ': ' + escHtml(d.user_message).substring(0, 28) + '…';
         if (d.integration_name) s += ' · ' + escHtml(d.integration_name);
         if (d.result_key) s += ' → ' + escHtml(d.result_key);
         return s;
@@ -1114,7 +1277,7 @@ function editNode(id) {
         showConditionPanel(node);
     } else if (node.type === 'operation') {
         showOperationPanel(node);
-    } else if (node.type === 'integration') {
+    } else if (node.type === 'integration' || node.type === 'ai_agent') {
         showIntegrationPanel(node);
     } else {
         showGenericPanel(node);
@@ -1147,7 +1310,22 @@ function toggleOperationSubSections(type, data, nodeId) {
     document.getElementById('opMathFields').classList.toggle('d-none', !isMath);
     document.getElementById('opFormatFields').classList.toggle('d-none', type !== 'format_text');
     document.getElementById('opLoopFields').classList.toggle('d-none', type !== 'loop');
-    document.getElementById('opResultKeyGroup').classList.toggle('d-none', type === 'loop' || !type);
+    document.getElementById('opDelayFields').classList.toggle('d-none', type !== 'delay');
+    document.getElementById('opResultKeyGroup').classList.toggle('d-none', type === 'loop' || type === 'delay' || !type);
+
+    if (type === 'delay') {
+        const mode = (data && data.delay_mode) || 'static';
+        document.getElementById('opDelayMode').value = mode;
+        document.getElementById('opDelaySeconds').value = (data && data.seconds) || '';
+        document.getElementById('opDelayMin').value = (data && data.min_seconds) || '';
+        document.getElementById('opDelayMax').value = (data && data.max_seconds) || '';
+        document.getElementById('opDelayStaticFields').classList.toggle('d-none', mode !== 'static');
+        document.getElementById('opDelayRandomFields').classList.toggle('d-none', mode !== 'random');
+        document.getElementById('opDelayMode').onchange = function () {
+            document.getElementById('opDelayStaticFields').classList.toggle('d-none', this.value !== 'static');
+            document.getElementById('opDelayRandomFields').classList.toggle('d-none', this.value !== 'random');
+        };
+    }
 
     if (isMath) {
         const container = document.getElementById('opValuesRows');
@@ -1199,9 +1377,17 @@ function collectOperationData() {
     } else if (data.type === 'loop') {
         data.field = document.getElementById('opLoopField').value;
         data.as = document.getElementById('opLoopAs').value || 'item';
+    } else if (data.type === 'delay') {
+        data.delay_mode = document.getElementById('opDelayMode').value;
+        if (data.delay_mode === 'static') {
+            data.seconds = Number(document.getElementById('opDelaySeconds').value) || 0;
+        } else {
+            data.min_seconds = Number(document.getElementById('opDelayMin').value) || 0;
+            data.max_seconds = Number(document.getElementById('opDelayMax').value) || 0;
+        }
     }
 
-    if (data.type !== 'loop') {
+    if (data.type !== 'loop' && data.type !== 'delay') {
         const rk = document.getElementById('opResultKey').value;
         if (rk) data.result_key = rk;
     }
@@ -1354,6 +1540,33 @@ function toggleActionSubSections(action, data, nodeId) {
     document.getElementById('orderBySection').classList.toggle('d-none', !['get', 'first'].includes(action));
     document.getElementById('limitSection').classList.toggle('d-none', action !== 'get');
 
+    // Media (Spatie) section
+    const isMediaAction = ['create', 'update', 'get', 'first', 'find'].includes(action);
+    document.getElementById('mediaSection').classList.toggle('d-none', !isMediaAction);
+    if (isMediaAction) {
+        const isWriteMedia = ['create', 'update'].includes(action);
+        document.getElementById('mediaWriteFields').classList.toggle('d-none', !isWriteMedia);
+        document.getElementById('mediaReadFields').classList.toggle('d-none', isWriteMedia);
+
+        const media = (data && data.media) || null;
+        const mediaOn = !!(media && media.enabled);
+        document.getElementById('mediaEnabled').checked = mediaOn;
+        document.getElementById('mediaFields').classList.toggle('d-none', !mediaOn);
+
+        if (isWriteMedia) {
+            document.getElementById('mediaCollection').value = (media && media.collection) || '';
+            document.getElementById('mediaAction').value = (media && media.action) || 'add';
+            const srcContainer = document.getElementById('mediaSourceContainer');
+            srcContainer.innerHTML = '';
+            srcContainer.appendChild(buildValueInput('media_source', (media && media.source) || '', nodeId));
+            const fnContainer = document.getElementById('mediaFileNameContainer');
+            fnContainer.innerHTML = '';
+            fnContainer.appendChild(buildValueInput('media_file_name', (media && media.file_name) || '', nodeId));
+        } else {
+            document.getElementById('mediaCollections').value = (media && media.collections) || '';
+        }
+    }
+
     if (isDb) {
         const modelClass = data.model || document.getElementById('actionModel').value || '';
 
@@ -1466,12 +1679,12 @@ async function showIntegrationPanel(node) {
 
     const d = node.data || {};
     const typeSelect = document.getElementById('integrationType');
-    typeSelect.value = d.type || '';
+    typeSelect.value = d.type || (node.type === 'ai_agent' ? 'ai_agent' : '');
 
     document.getElementById('intResultKey').value = d.result_key || '';
 
     // Populate sub-sections FIRST (synchronously) so modal opens with correct data
-    toggleIntegrationSubSections(d.type || '', d, node.id);
+    toggleIntegrationSubSections(typeSelect.value, d, node.id);
 
     // Load saved integrations dropdown (async — populates after modal opens)
     const intSelect = document.getElementById('integrationSelect');
@@ -1502,6 +1715,7 @@ function toggleIntegrationSubSections(type, data, nodeId) {
     document.getElementById('intWhatsappFields').classList.toggle('d-none', type !== 'whatsapp');
     document.getElementById('intFirebaseFields').classList.toggle('d-none', type !== 'firebase');
     document.getElementById('intGdriveFields').classList.toggle('d-none', type !== 'google_drive');
+    document.getElementById('intAiAgentFields').classList.toggle('d-none', type !== 'ai_agent');
 
     if (type === 'webhook') {
         const urlContainer = document.getElementById('intWebhookUrlContainer');
@@ -1563,6 +1777,19 @@ function toggleIntegrationSubSections(type, data, nodeId) {
 
     if (type === 'google_drive') {
         document.getElementById('intGdriveAction').value = data.action || 'upload';
+    }
+
+    if (type === 'ai_agent') {
+        const sysContainer = document.getElementById('intAiSystemPromptContainer');
+        sysContainer.innerHTML = '';
+        sysContainer.appendChild(buildTextareaValueInput('int_ai_system_prompt', data.system_prompt || '', nodeId));
+
+        const msgContainer = document.getElementById('intAiUserMessageContainer');
+        msgContainer.innerHTML = '';
+        msgContainer.appendChild(buildTextareaValueInput('int_ai_user_message', data.user_message || '', nodeId));
+
+        document.getElementById('intAiMaxTokens').value = data.max_tokens || '';
+        document.getElementById('intAiTemperature').value = data.temperature !== undefined ? data.temperature : '';
     }
 }
 
@@ -1658,6 +1885,17 @@ function collectIntegrationData() {
         data.action = document.getElementById('intGdriveAction').value;
     }
 
+    if (data.type === 'ai_agent') {
+        const sysTextarea = document.querySelector('#intAiSystemPromptContainer textarea[name="int_ai_system_prompt"]');
+        data.system_prompt = sysTextarea ? sysTextarea.value : '';
+        const msgTextarea = document.querySelector('#intAiUserMessageContainer textarea[name="int_ai_user_message"]');
+        data.user_message = msgTextarea ? msgTextarea.value : '';
+        const maxTokens = document.getElementById('intAiMaxTokens').value;
+        if (maxTokens) data.max_tokens = parseInt(maxTokens, 10);
+        const temp = document.getElementById('intAiTemperature').value;
+        if (temp !== '') data.temperature = parseFloat(temp);
+    }
+
     if (!data.result_key) delete data.result_key;
     return data;
 }
@@ -1685,7 +1923,7 @@ document.getElementById('saveNodeBtn').addEventListener('click', () => {
         node.data = collectConditionData();
     } else if (node.type === 'operation') {
         node.data = collectOperationData();
-    } else if (node.type === 'integration') {
+    } else if (node.type === 'integration' || node.type === 'ai_agent') {
         node.data = collectIntegrationData();
     } else {
         try {
@@ -1773,6 +2011,21 @@ function collectActionData() {
     if (!data.result_key) delete data.result_key;
     if (!data.model) delete data.model;
 
+    // Media (Spatie)
+    if (document.getElementById('mediaEnabled').checked && ['create', 'update', 'get', 'first', 'find'].includes(data.action)) {
+        data.media = { enabled: true };
+        if (['create', 'update'].includes(data.action)) {
+            data.media.collection = document.getElementById('mediaCollection').value || 'default';
+            data.media.action = document.getElementById('mediaAction').value || 'add';
+            const srcInput = document.querySelector('#mediaSourceContainer input[name="media_source"]');
+            data.media.source = srcInput ? srcInput.value : '';
+            const fnInput = document.querySelector('#mediaFileNameContainer input[name="media_file_name"]');
+            if (fnInput && fnInput.value) data.media.file_name = fnInput.value;
+        } else {
+            data.media.collections = document.getElementById('mediaCollections').value || '';
+        }
+    }
+
     return data;
 }
 
@@ -1796,6 +2049,24 @@ document.getElementById('addFindByRow').addEventListener('click', () => {
     const nodeId = Number(document.getElementById('editNodeId').value);
     const modelClass = document.getElementById('actionModel').value;
     addFindByRow(document.getElementById('findByRows'), '', '', modelClass, nodeId);
+});
+
+document.getElementById('mediaEnabled').addEventListener('change', function () {
+    document.getElementById('mediaFields').classList.toggle('d-none', !this.checked);
+    if (this.checked) {
+        const nodeId = Number(document.getElementById('editNodeId').value);
+        const action = document.getElementById('actionType').value;
+        if (['create', 'update'].includes(action)) {
+            const srcContainer = document.getElementById('mediaSourceContainer');
+            if (!srcContainer.hasChildNodes()) {
+                srcContainer.appendChild(buildValueInput('media_source', '', nodeId));
+            }
+            const fnContainer = document.getElementById('mediaFileNameContainer');
+            if (!fnContainer.hasChildNodes()) {
+                fnContainer.appendChild(buildValueInput('media_file_name', '', nodeId));
+            }
+        }
+    }
 });
 
 document.getElementById('addWhereRow').addEventListener('click', () => {

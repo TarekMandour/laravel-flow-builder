@@ -195,6 +195,7 @@ class FlowEngine
             'action' => app(ActionExecutor::class),
             'operation' => app(OperationExecutor::class),
             'integration' => app(IntegrationExecutor::class),
+            'ai_agent' => app(IntegrationExecutor::class),
             default => throw new \InvalidArgumentException("Unknown node type: {$type}"),
         };
     }

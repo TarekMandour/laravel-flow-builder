@@ -20,6 +20,7 @@ class OperationExecutor implements NodeExecutor
             'divide' => $this->divide($data, $state),
             'format_text' => $this->formatText($data, $state),
             'loop' => $this->loop($data, $state),
+            'delay' => $this->delay($data, $state),
             default => throw new \InvalidArgumentException("Unknown operation type: {$type}"),
         };
     }
@@ -122,6 +123,28 @@ class OperationExecutor implements NodeExecutor
         // The FlowEngine handles the actual iteration over downstream nodes.
         // This executor just returns the items to iterate over.
         return $items;
+    }
+
+    protected function delay(array $data, FlowState $state): int
+    {
+        $cap = (int) config('flow-builder.max_delay_seconds', 300);
+        $mode = $data['delay_mode'] ?? 'static';
+
+        if ($mode === 'random') {
+            $min = max(0, (int) ($data['min_seconds'] ?? 0));
+            $max = max($min, (int) ($data['max_seconds'] ?? 0));
+            $seconds = $min === $max ? $min : rand($min, $max);
+        } else {
+            $seconds = max(0, (int) ($data['seconds'] ?? 0));
+        }
+
+        $seconds = min($seconds, $cap);
+
+        if ($seconds > 0) {
+            sleep($seconds);
+        }
+
+        return $seconds;
     }
 
     protected function resolveNumericValues(array $data, FlowState $state): array

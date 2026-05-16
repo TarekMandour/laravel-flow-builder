@@ -29,6 +29,7 @@
                             <option value="whatsapp" {{ old('type') === 'whatsapp' ? 'selected' : '' }}>WhatsApp</option>
                             <option value="firebase" {{ old('type') === 'firebase' ? 'selected' : '' }}>Firebase Push Notification</option>
                             <option value="google_drive" {{ old('type') === 'google_drive' ? 'selected' : '' }}>Google Drive</option>
+                            <option value="ai_agent" {{ old('type') === 'ai_agent' ? 'selected' : '' }}>AI Agent (LLM / Groq / OpenAI)</option>
                         </select>
                         @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>

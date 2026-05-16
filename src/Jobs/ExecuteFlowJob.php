@@ -15,12 +15,15 @@ class ExecuteFlowJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries;
+    public int $timeout;
 
     public function __construct(
         protected int $flowId,
         protected array $payload = []
     ) {
         $this->tries = config('flow-builder.retry.max_attempts', 3);
+        // Add headroom beyond the max delay so the job isn't killed mid-sleep.
+        $this->timeout = config('flow-builder.max_delay_seconds', 300) + 120;
         $this->onQueue(config('flow-builder.queue.queue', 'flows'));
 
         $connection = config('flow-builder.queue.connection');

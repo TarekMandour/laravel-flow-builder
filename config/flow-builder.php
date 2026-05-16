@@ -33,6 +33,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Delay Operation
+    |--------------------------------------------------------------------------
+    | Maximum seconds a delay node is allowed to sleep. Prevents runaway
+    | flows from blocking queue workers indefinitely.
+    */
+    'max_delay_seconds' => env('FLOW_BUILDER_MAX_DELAY_SECONDS', 300),
+
+    /*
+    |--------------------------------------------------------------------------
     | Route Configuration
     |--------------------------------------------------------------------------
     */
@@ -81,6 +90,11 @@ return [
         ],
         'google_drive' => [
             'credentials_path' => env('FLOW_BUILDER_GOOGLE_DRIVE_CREDENTIALS'),
+        ],
+        'ai_agent' => [
+            'api_key' => env('FLOW_BUILDER_AI_API_KEY'),
+            'model'   => env('FLOW_BUILDER_AI_MODEL', 'llama-3.3-70b-versatile'),
+            'url'     => env('FLOW_BUILDER_AI_URL', 'https://api.groq.com/openai/v1/chat/completions'),
         ],
     ],
 

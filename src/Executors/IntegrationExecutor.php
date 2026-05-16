@@ -33,6 +33,7 @@ class IntegrationExecutor implements NodeExecutor
             'whatsapp' => $this->sendWhatsApp($integration, $data, $params, $state),
             'firebase' => $this->sendFirebaseNotification($integration, $data, $params, $state),
             'google_drive' => $this->googleDriveUpload($integration, $data, $params, $state),
+            'ai_agent' => $this->callAiAgent($integration, $data, $params, $state),
             default => throw new \InvalidArgumentException("Unknown integration type: {$type}"),
         };
 
@@ -202,5 +203,65 @@ class IntegrationExecutor implements NodeExecutor
             'action' => $action,
             'message' => 'Google Drive integration requires additional setup. Override IntegrationExecutor to implement.',
         ];
+    }
+
+    protected function callAiAgent(?Integration $integration, array $data, array $params, FlowState $state): array
+    {
+        $apiKey = $integration
+            ? ($integration->credentials['api_key'] ?? config('flow-builder.integrations.ai_agent.api_key'))
+            : config('flow-builder.integrations.ai_agent.api_key');
+
+        $model = $integration
+            ? ($integration->credentials['model'] ?? config('flow-builder.integrations.ai_agent.model'))
+            : config('flow-builder.integrations.ai_agent.model');
+
+        $url = $integration
+            ? ($integration->credentials['url'] ?? config('flow-builder.integrations.ai_agent.url'))
+            : config('flow-builder.integrations.ai_agent.url');
+
+        if (!$apiKey) {
+            throw new \RuntimeException('AI Agent API key is not configured.');
+        }
+
+        $systemPrompt = $state->resolveValue($data['system_prompt'] ?? '');
+        $userMessage  = $state->resolveValue($data['user_message'] ?? '');
+
+        $messages = [];
+        if ($systemPrompt) {
+            $messages[] = ['role' => 'system', 'content' => $systemPrompt];
+        }
+        $messages[] = ['role' => 'user', 'content' => $userMessage];
+
+        $body = ['model' => $model, 'messages' => $messages];
+        if (!empty($data['max_tokens'])) {
+            $body['max_tokens'] = (int) $data['max_tokens'];
+        }
+        if (isset($data['temperature']) && $data['temperature'] !== '') {
+            $body['temperature'] = (float) $data['temperature'];
+        }
+
+        try {
+            $response = Http::withToken($apiKey)->withOptions([
+                'curl' => [
+                    CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA,
+                ],
+            ])->post($url, $body);
+            $json = $response->json();
+
+            return [
+                'success' => $response->successful(),
+                'status'  => $response->status(),
+                'text'    => $json['choices'][0]['message']['content'] ?? null,
+                'model'   => $json['model'] ?? $model,
+                'usage'   => $json['usage'] ?? null,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'status'  => 0,
+                'text'    => null,
+                'error'   => $e->getMessage(),
+            ];
+        }
     }
 }

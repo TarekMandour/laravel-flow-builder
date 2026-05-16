@@ -41,11 +41,13 @@ class ActionExecutor implements NodeExecutor
 
         $model = $modelClass::create($attributes);
 
+        $this->handleMediaWrite($model, $data, $state);
+
         if (isset($data['result_key'])) {
-            $state->set($data['result_key'], $model->toArray());
+            $state->set($data['result_key'], $model->fresh()->toArray());
         }
 
-        return $model->toArray();
+        return $model->fresh()->toArray();
     }
 
     protected function updateModel(array $data, FlowState $state): mixed
@@ -56,6 +58,8 @@ class ActionExecutor implements NodeExecutor
 
         $model = $this->findModel($modelClass, $findBy);
         $model->update($attributes);
+
+        $this->handleMediaWrite($model, $data, $state);
 
         if (isset($data['result_key'])) {
             $state->set($data['result_key'], $model->fresh()->toArray());
@@ -113,7 +117,14 @@ class ActionExecutor implements NodeExecutor
     {
         $query = $this->buildQuery($data, $state);
 
-        $result = $query->get()->toArray();
+        $result = $query->get()->map(function ($model) use ($data) {
+            $row = $model->toArray();
+            $media = $data['media'] ?? null;
+            if ($media && !empty($media['enabled']) && $model instanceof \Spatie\MediaLibrary\HasMedia) {
+                $row['media'] = $this->resolveMediaData($model, $media);
+            }
+            return $row;
+        })->toArray();
 
         if (isset($data['result_key'])) {
             $state->set($data['result_key'], $result);
@@ -127,7 +138,16 @@ class ActionExecutor implements NodeExecutor
         $query = $this->buildQuery($data, $state);
 
         $model = $query->first();
-        $result = $model ? $model->toArray() : null;
+        if (!$model) {
+            if (isset($data['result_key'])) $state->set($data['result_key'], null);
+            return null;
+        }
+
+        $result = $model->toArray();
+        $media = $data['media'] ?? null;
+        if ($media && !empty($media['enabled']) && $model instanceof \Spatie\MediaLibrary\HasMedia) {
+            $result['media'] = $this->resolveMediaData($model, $media);
+        }
 
         if (isset($data['result_key'])) {
             $state->set($data['result_key'], $result);
@@ -142,8 +162,25 @@ class ActionExecutor implements NodeExecutor
         $id = $state->resolveValue($data['find_id'] ?? '');
 
         $columns = !empty($data['select_columns']) ? $data['select_columns'] : ['*'];
+        // Always include the primary key when media is requested — getMedia() needs it.
+        if (!empty($data['media']['enabled']) && !in_array('*', $columns)) {
+            $pk = (new $modelClass)->getKeyName();
+            if (!in_array($pk, $columns)) {
+                $columns[] = $pk;
+            }
+        }
         $model = $modelClass::find($id, $columns);
-        $result = $model ? $model->toArray() : null;
+
+        if (!$model) {
+            if (isset($data['result_key'])) $state->set($data['result_key'], null);
+            return null;
+        }
+
+        $result = $model->toArray();
+        $media = $data['media'] ?? null;
+        if ($media && !empty($media['enabled']) && $model instanceof \Spatie\MediaLibrary\HasMedia) {
+            $result['media'] = $this->resolveMediaData($model, $media);
+        }
 
         if (isset($data['result_key'])) {
             $state->set($data['result_key'], $result);
@@ -159,7 +196,15 @@ class ActionExecutor implements NodeExecutor
 
         // Select columns
         if (!empty($data['select_columns'])) {
-            $query->select($data['select_columns']);
+            $columns = $data['select_columns'];
+            // Always include the primary key when media is requested — getMedia() needs it.
+            if (!empty($data['media']['enabled']) && !in_array('*', $columns)) {
+                $pk = (new $modelClass)->getKeyName();
+                if (!in_array($pk, $columns)) {
+                    $columns[] = $pk;
+                }
+            }
+            $query->select($columns);
         }
 
         // Where conditions
@@ -251,6 +296,84 @@ class ActionExecutor implements NodeExecutor
             'status' => $response->status(),
         ];
     }
+
+    // -------------------------------------------------------
+    // Media (Spatie Media Library) helpers
+    // -------------------------------------------------------
+
+    protected function handleMediaWrite(Model $model, array $data, FlowState $state): void
+    {
+        $media = $data['media'] ?? null;
+        if (!$media || empty($media['enabled'])) return;
+        if (!($model instanceof \Spatie\MediaLibrary\HasMedia)) return;
+
+        $source = $state->resolveValue($media['source'] ?? '');
+        if (!$source) return;
+
+        $collection = $media['collection'] ?? 'default';
+        $action     = $media['action'] ?? 'add';
+        $fileName   = $state->resolveValue($media['file_name'] ?? '');
+
+        if ($action === 'replace') {
+            $model->clearMediaCollection($collection);
+        }
+
+        $adder = str_starts_with($source, 'http://') || str_starts_with($source, 'https://')
+            ? $model->addMediaFromUrl($source)
+            : $model->addMedia($source)->preservingOriginal();
+
+        if ($fileName) {
+            $adder->usingFileName($fileName);
+        }
+
+        $adder->toMediaCollection($collection);
+    }
+
+    protected function loadMediaForModel(Model $model, array $data): void
+    {
+        // Kept for backward compatibility — resolveMediaData() is now preferred.
+        $media = $data['media'] ?? null;
+        if (!$media || empty($media['enabled'])) return;
+        if (!($model instanceof \Spatie\MediaLibrary\HasMedia)) return;
+        $model->load('media');
+    }
+
+    protected function resolveMediaData(\Spatie\MediaLibrary\HasMedia $model, array $mediaConfig): array
+    {
+        $collections = array_values(
+            array_filter(array_map('trim', explode(',', $mediaConfig['collections'] ?? '')))
+        );
+
+        // When no collections specified, use $model->media (all collections).
+        // Never use getMedia() with no args — it defaults to 'default' collection only.
+        $items = empty($collections)
+            ? $model->media
+            : collect($collections)->flatMap(fn ($c) => $model->getMedia($c));
+
+        return $items->map(function ($item) {
+            try {
+                $url     = $item->getUrl();
+                $fullUrl = $item->getFullUrl();
+            } catch (\Throwable) {
+                $url     = null;
+                $fullUrl = null;
+            }
+            return [
+                'id'         => $item->id,
+                'uuid'       => $item->uuid,
+                'name'       => $item->name,
+                'file_name'  => $item->file_name,
+                'mime_type'  => $item->mime_type,
+                'size'       => $item->size,
+                'collection' => $item->collection_name,
+                'disk'       => $item->disk,
+                'url'        => $url,
+                'full_url'   => $fullUrl,
+            ];
+        })->values()->toArray();
+    }
+
+    // -------------------------------------------------------
 
     protected function resolveModelClass(string $modelClass): string
     {
